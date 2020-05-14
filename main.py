@@ -134,6 +134,7 @@ pad1 = pad_sequences(encoded1,maxlen = 78, padding = 'post')
 pad2 = pad_sequences(encoded2,maxlen = 78, padding = 'post')
 
 #accuracy   #label decoding
+import numpy as np
 predict_data_deep = model.predict([pad1,pad2])
 class_data = np.argmax(predict_data_deep,1)
 entailment_class = encoder.inverse_transform(class_data)
