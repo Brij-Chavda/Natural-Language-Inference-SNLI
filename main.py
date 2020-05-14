@@ -48,6 +48,7 @@ nltk.download('wordnet')
 nltk.download('averaged_perceptron_tagger')
 
 import json
+import numpy as np
 test_data = [json.loads(line) for line in open('snli_1.0_test.jsonl', 'r')]
 
 test_labels = []
@@ -129,8 +130,8 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 encoded1 = t.texts_to_sequences(sen1_final_test)
 encoded2 = t.texts_to_sequences(sen2_final_test)
-pad1 = pad_sequences(encoded1,maxlen = 56, padding = 'post')
-pad2 = pad_sequences(encoded2,maxlen = 56, padding = 'post')
+pad1 = pad_sequences(encoded1,maxlen = 78, padding = 'post')
+pad2 = pad_sequences(encoded2,maxlen = 78, padding = 'post')
 
 #accuracy   #label decoding
 predict_data_deep = model.predict([pad1,pad2])
