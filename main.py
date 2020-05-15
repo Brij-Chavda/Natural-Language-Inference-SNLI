@@ -116,7 +116,36 @@ file.close()
 import tensorflow as tf
 from tensorflow import keras 
 
-model = tf.keras.models.load_model('models/Deep_learning_model.h5')
+import numpy as np
+import json
+import pandas as pd
+import pickle
+from numpy import array
+from numpy import asarray
+from numpy import zeros
+from tensorflow import keras
+import tensorflow as tf
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Embedding
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Embedding
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import LSTM
+from tensorflow.keras.layers import Bidirectional
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Flatten
+from tensorflow.keras.layers import Masking
+from tensorflow.keras.layers import GlobalAveragePooling1D
+from tensorflow.keras.layers import GlobalMaxPooling1D
+from tensorflow.keras.layers import Attention
+
+model = tf.keras.models.load_model('models/Deep_learning_model1.h5')
 
 #tokenizer preprocessing
 import pickle

@@ -111,6 +111,9 @@ from tensorflow.keras.layers import Bidirectional
 from tensorflow.keras.layers import Dropout
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Masking
+from tensorflow.keras.layers import GlobalAveragePooling1D
+from tensorflow.keras.layers import GlobalMaxPooling1D
+from tensorflow.keras.layers import Attention
 
 #tokenize and word embedding
 def embedding(sen1_train,sen2_train,sen1_test,sen2_test):
@@ -122,7 +125,7 @@ def embedding(sen1_train,sen2_train,sen1_test,sen2_test):
   vocab_size1 = len(t.word_index) + 1
   encoded_docs = t.texts_to_sequences(sen1_train)
   encoded_docs1 = t.texts_to_sequences(sen2_train)
-  max_length = 56
+  max_length = 78
   padded_docs = pad_sequences(encoded_docs, maxlen=max_length, padding='post')
   padded_docs1 = pad_sequences(encoded_docs1, maxlen=max_length, padding='post')
   p1 = np.array(padded_docs)
@@ -141,38 +144,59 @@ def embedding(sen1_train,sen2_train,sen1_test,sen2_test):
 #model
 def create_model(vocab_size,embedding_matrix): 
 
-  input1 =Input(shape = (56))
-  e1 = Embedding(vocab_size, 300, weights=[embedding_matrix], input_length=56, trainable=False, mask_zero = True)(input1)
-  #m1 = Masking(mask_value=0)(e1)
-  LSTM_IP_layer1 = Bidirectional(LSTM(300, input_shape=(56,300)))(e1)
-  OP1 = Dropout(0.25)(LSTM_IP_layer1)
-  #Pool1 = AveragePooling3D(pool_size = 2, padding = 'valid')(OP1)
+  input1 =Input(shape = (78))
+  e1 = Embedding(vocab_size, 300, weights=[embedding_matrix], input_length=78, trainable=False)(input1)
+  #mask1 = Masking(mask_value=0)(e1)
+  LSTM_IP_layer1,h1,m1,h2,m2 = Bidirectional(LSTM(300, input_shape=(78,300), return_sequences=True, return_state=True, dropout = 0.25))(e1)
+  hstate1 = tf.keras.layers.Concatenate(axis = 1)([h1,h2])
 
-  input2 = Input(shape = (56))
-  e2 = Embedding(vocab_size, 300, weights=[embedding_matrix], input_length=56, trainable=False, mask_zero = True)(input2)
-  #m2 = Masking(mask_value=0.0)(e2)
-  LSTM_IP_layer2 = Bidirectional(LSTM(300, input_shape=(56,300)))(e2)
-  OP2 = Dropout(0.25)(LSTM_IP_layer2)
-  #Pool2 = AveragePooling3D(pool_size = 2, padding = 'valid')(OP2)
+  def Func3(X):
+      return X
+  
+  LSTM_IP_layer1 = tf.keras.layers.Lambda(Func3, name = 'LSTM_IP_layer1')(LSTM_IP_layer1)
+  encoding1 = Attention()([LSTM_IP_layer1, hstate1])
+  en1 = GlobalAveragePooling1D()(encoding1)
+  lstm1 = GlobalMaxPooling1D()(LSTM_IP_layer1)
+  lstm1avg = GlobalAveragePooling1D()(LSTM_IP_layer1)
+  enmax1 = GlobalMaxPooling1D()(encoding1)
+  OP1 = tf.keras.layers.Concatenate()([lstm1,en1])
+  
+  input2 = Input(shape = (78))
+  e2 = Embedding(vocab_size, 300, weights=[embedding_matrix], input_length=78, trainable=False)(input2)
+  #mask2 = Masking(mask_value=0.0)(e2)
+  LSTM_IP_layer2,h3,m3,h4,m4 = Bidirectional(LSTM(300, input_shape=(78,300),  return_sequences=True, return_state=True, dropout = 0.25))(e2)
+  hstate2 = tf.keras.layers.Concatenate(axis = 1)([h3,h4])
+
+  LSTM_IP_layer2 = tf.keras.layers.Lambda(Func3, name = 'LSTM_IP_layer2')(LSTM_IP_layer2)
+  encoding2 = Attention()([LSTM_IP_layer2, hstate2])
+  en2 = GlobalAveragePooling1D()(encoding2)
+  enmax2 = GlobalMaxPooling1D()(encoding2)
+  lstm2 = GlobalMaxPooling1D()(LSTM_IP_layer2)
+  lstm2avg = GlobalAveragePooling1D()(LSTM_IP_layer2)
+  OP2 = tf.keras.layers.Concatenate()([lstm2,en2])
+  #max2 = tf.nn.max_pool()(LSTM_IP_layer2)
+
+  def Func2(x):
+      return tf.keras.backend.reverse(x,axes=1)
 
   def Func(x):
-      return x[0] * x[1]
-  Lambda_1 = tf.keras.layers.Lambda(Func, name = 'Lambda_1')([OP1,OP2])
-
+      return (x[0]*x[1])
+  Lambda_1 = tf.keras.layers.Lambda(Func, name = 'Lambda_1')([en1,en2])
+  
   def Func1(x):
-      return x[0] - x[1]
-  Lambda_2 = tf.keras.layers.Lambda(Func1, name = 'Lambda_2')([OP1,OP2])
+      return (x[0]-x[1])
+  Lambda_2 = tf.keras.layers.Lambda(Func1, name = 'Lambda_2')([en1,en2])
+  
+  concat = tf.keras.layers.Concatenate()([lstm1,lstm1avg,Lambda_1,Lambda_2,lstm2avg,lstm2])
 
-  #concatl = tf.keras.layers.Concatenate(axis=1)([OP1,OP2])
-  concat = tf.keras.layers.Concatenate(axis=1)([Lambda_1, Lambda_2])
   flat = Flatten()(concat)
-  Dense_L1 = Dense(400,activation='relu')(flat)
-  Drop = Dropout(0.1)(Dense_L1)
-  Dense_L2 = Dense(400,activation='relu')(Drop)
-  Drop1 = Dropout(0.1)(Dense_L2)
-  output = tf.keras.layers.Dense(3,activation='softmax')(Drop1)
+  Dense1 = Dense(300,activation = 'relu')(flat)
+  Drop1 = Dropout(0.1)(Dense1)
+  Dense2 = Dense(300,activation = 'relu')(Drop1)
+  Drop2 = Dropout(0.1)(Dense2)
+  output = tf.keras.layers.Dense(3,activation='softmax')(Drop2)
   full_model = tf.keras.Model(inputs = [input1,input2], outputs=output)
-  full_model.compile(optimizer = 'rmsprop', loss='categorical_crossentropy', metrics = ['accuracy'])
+  full_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics = ['accuracy'])
   return full_model
 
 from sklearn import metrics
@@ -181,5 +205,5 @@ if __name__ == "__main__":
   Xtrain1,Xtrain2,Xtest1,Xtest2,vocab_size,embedding_matrix = embedding(sen1_train,sen2_train,sen1_test,sen2_test)
   model = create_model(vocab_size,embedding_matrix)
   history = model.fit([Xtrain1,Xtrain2],Ytrain,batch_size=500,validation_split = 0.2,epochs=8)
-  model.save('models/Deep_Learning_model12.h5')
+  model.save('models/Deep_Learning_model1.h5')
   
